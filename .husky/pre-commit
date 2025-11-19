@@ -1,0 +1,40 @@
+#!/usr/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "🔍 Running pre-commit checks..."
+
+# Verificar restricciones
+echo "📋 Verifying restrictions..."
+node scripts/verify-restrictions.js
+
+if [ $? -ne 0 ]; then
+  echo "❌ Restrictions check failed. Please fix the issues before committing."
+  exit 1
+fi
+
+# Verificar que no hay secrets
+echo "🔒 Checking for secrets..."
+if git diff --cached --name-only | xargs grep -lE "(password|api[_-]?key|secret|token)\s*[:=]\s*['\"][^'\"]+['\"]" 2>/dev/null; then
+  echo "❌ Potential secrets found in staged files. Please remove them."
+  exit 1
+fi
+
+# Verificar que .env no se commitea
+if git diff --cached --name-only | grep -E "^\.env$"; then
+  echo "❌ .env file cannot be committed. Please remove it from staging."
+  exit 1
+fi
+
+# Linter (si está configurado)
+if [ -f "iyf_backend_2026/package.json" ]; then
+  cd iyf_backend_2026
+  if npm run lint 2>/dev/null; then
+    echo "✅ Linter passed"
+  else
+    echo "⚠️  Linter found issues (non-blocking)"
+  fi
+  cd ..
+fi
+
+echo "✅ Pre-commit checks passed"
+

@@ -1,0 +1,35 @@
+# Git Attributes
+# Ensure consistent line endings and file handling
+
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Explicitly declare text files
+*.ts text
+*.js text
+*.json text
+*.md text
+*.html text
+*.css text
+*.scss text
+*.yml text
+*.yaml text
+
+# Denote files that are binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+
+# Shell scripts
+*.sh text eol=lf
+
+# Windows scripts
+*.bat text eol=crlf
+*.cmd text eol=crlf
+

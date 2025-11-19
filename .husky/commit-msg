@@ -1,0 +1,24 @@
+#!/usr/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# Verificar formato de commit message (opcional - Conventional Commits)
+commit_msg=$(cat "$1")
+
+# Verificar que el mensaje no está vacío
+if [ -z "$commit_msg" ]; then
+  echo "❌ Commit message cannot be empty"
+  exit 1
+fi
+
+# Verificar que no contiene secrets
+if echo "$commit_msg" | grep -iE "(password|api[_-]?key|secret|token)\s*[:=]\s*['\"][^'\"]+['\"]"; then
+  echo "❌ Commit message contains potential secrets"
+  exit 1
+fi
+
+# Sugerir formato (no bloquea, solo advierte)
+if ! echo "$commit_msg" | grep -qE "^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?:"; then
+  echo "⚠️  Consider using Conventional Commits format: type(scope): description"
+  echo "   Example: feat(auth): add login functionality"
+fi
+

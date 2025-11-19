@@ -1,0 +1,24 @@
+{
+  "name": "iyf-orlando-monorepo",
+  "version": "1.0.0",
+  "description": "IYF Orlando Platform 2026 - Monorepo",
+  "private": true,
+  "scripts": {
+    "verify": "node scripts/verify-restrictions.js",
+    "verify:rls": "node scripts/verify-rls.js",
+    "verify:all": "npm run verify && npm run verify:rls",
+    "precommit": "node scripts/verify-restrictions.js"
+  },
+  "devDependencies": {
+    "@angular-eslint/eslint-plugin": "^20.6.0",
+    "@angular-eslint/template-parser": "^20.6.0",
+    "@typescript-eslint/eslint-plugin": "^8.47.0",
+    "@typescript-eslint/parser": "^8.47.0",
+    "eslint": "^9.39.1",
+    "husky": "^8.0.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
