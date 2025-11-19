@@ -1,0 +1,4 @@
+# Migraciones SQL
+# Formato de nombre: YYYYMMDDHHMMSS_description.sql
+# Ejemplo: 20260101000000_create_profiles_table.sql
+

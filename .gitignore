@@ -50,6 +50,9 @@ secrets/
 # Husky
 .husky/_
 
+# Supabase
+.supabase/
+
 # Documentation files (Markdown)
 *.md
 
