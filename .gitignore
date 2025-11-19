@@ -50,3 +50,6 @@ secrets/
 # Husky
 .husky/_
 
+# Documentation files (Markdown)
+*.md
+
