@@ -1,6 +1,7 @@
-import { CurrencyPipe, NgClass } from '@angular/common';
+import { CurrencyPipe, DatePipe, NgClass } from '@angular/common';
 import {
     ChangeDetectionStrategy,
+    ChangeDetectorRef,
     Component,
     OnDestroy,
     OnInit,
@@ -13,9 +14,13 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTableModule } from '@angular/material/table';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatSlideToggleModule, MatSlideToggleChange } from '@angular/material/slide-toggle';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
 import { TranslocoModule } from '@jsverse/transloco';
 import { ProjectService } from 'app/modules/admin/dashboards/project/project.service';
+import { TeachersService } from 'app/core/services/teachers.service';
 import { ApexOptions, NgApexchartsModule } from 'ng-apexcharts';
 import { Subject, takeUntil } from 'rxjs';
 
@@ -32,10 +37,14 @@ import { Subject, takeUntil } from 'rxjs';
         MatMenuModule,
         MatTabsModule,
         MatButtonToggleModule,
+        MatSlideToggleModule,
+        MatSnackBarModule,
+        MatTooltipModule,
         NgApexchartsModule,
         MatTableModule,
         NgClass,
         CurrencyPipe,
+        DatePipe,
     ],
 })
 export class ProjectComponent implements OnInit, OnDestroy {
@@ -46,7 +55,7 @@ export class ProjectComponent implements OnInit, OnDestroy {
     chartMonthlyExpenses: ApexOptions = {};
     chartYearlyExpenses: ApexOptions = {};
     data: any;
-    selectedProject: string = 'ACME Corp. Backend App';
+    selectedProject: string = '2026 Spring Academy';
     private _unsubscribeAll: Subject<any> = new Subject<any>();
 
     /**
@@ -54,7 +63,10 @@ export class ProjectComponent implements OnInit, OnDestroy {
      */
     constructor(
         private _projectService: ProjectService,
-        private _router: Router
+        private _teachersService: TeachersService,
+        private _router: Router,
+        private _changeDetectorRef: ChangeDetectorRef,
+        private _snackBar: MatSnackBar
     ) {}
 
     // -----------------------------------------------------------------------------------------------------
@@ -112,6 +124,114 @@ export class ProjectComponent implements OnInit, OnDestroy {
      */
     trackByFn(index: number, item: any): any {
         return item.id || index;
+    }
+
+    /**
+     * Get initials from teacher name
+     */
+    getInitials(name: string): string {
+        if (!name) return '';
+        const parts = name.trim().split(' ');
+        if (parts.length === 0) return '';
+        const firstInitial = parts[0].charAt(0).toUpperCase();
+        const lastInitial = parts.length > 1 ? parts[parts.length - 1].charAt(0).toUpperCase() : '';
+        return `${firstInitial}${lastInitial}`;
+    }
+
+    /**
+     * Navigate to edit teacher
+     */
+    editTeacher(teacher: any): void {
+        this._router.navigate(['/apps/teachers', teacher.id, 'edit']);
+    }
+
+    /**
+     * Delete teacher
+     */
+    deleteTeacher(teacher: any): void {
+        if (!confirm(`Are you sure you want to delete "${teacher.name}"?`)) {
+            return;
+        }
+
+        this._teachersService
+            .delete(teacher.id)
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe({
+                next: () => {
+                    this._snackBar.open('Teacher deleted successfully', 'Close', {
+                        duration: 3000,
+                    });
+                    // Reload data
+                    this._projectService.getData()
+                        .pipe(takeUntil(this._unsubscribeAll))
+                        .subscribe();
+                },
+                error: (error) => {
+                    console.error('Error deleting teacher:', error);
+                    this._snackBar.open('Error deleting teacher', 'Close', {
+                        duration: 3000,
+                    });
+                },
+            });
+    }
+
+    /**
+     * Handle toggle change event
+     */
+    onToggleChange(event: MatSlideToggleChange, teacher: any): void {
+        const newStatus = event.checked ? 'active' : 'inactive';
+        this.toggleStatus(teacher, newStatus);
+    }
+
+    /**
+     * Toggle teacher status
+     */
+    toggleStatus(teacher: any, newStatus?: 'active' | 'inactive'): void {
+        const status: 'active' | 'inactive' = newStatus || (teacher.status === 'active' ? 'inactive' : 'active');
+        
+        // Optimistically update the local state
+        if (this.data?.teamMembers) {
+            const teacherIndex = this.data.teamMembers.findIndex((t: any) => t.id === teacher.id);
+            if (teacherIndex !== -1) {
+                this.data.teamMembers[teacherIndex].status = status;
+                this._changeDetectorRef.markForCheck();
+            }
+        }
+        
+        this._teachersService
+            .toggleStatus(teacher.id, status)
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe({
+                next: (updatedTeacher) => {
+                    // Update with server response
+                    if (this.data?.teamMembers) {
+                        const index = this.data.teamMembers.findIndex((t: any) => t.id === teacher.id);
+                        if (index !== -1) {
+                            this.data.teamMembers[index].status = updatedTeacher.status;
+                            this._changeDetectorRef.markForCheck();
+                        }
+                    }
+                    this._snackBar.open(
+                        `Teacher ${status === 'active' ? 'activated' : 'deactivated'}`,
+                        'Close',
+                        { duration: 3000 }
+                    );
+                },
+                error: (error) => {
+                    console.error('Error updating teacher status:', error);
+                    // Revert optimistic update on error
+                    if (this.data?.teamMembers) {
+                        const index = this.data.teamMembers.findIndex((t: any) => t.id === teacher.id);
+                        if (index !== -1) {
+                            this.data.teamMembers[index].status = teacher.status; // Revert to original
+                            this._changeDetectorRef.markForCheck();
+                        }
+                    }
+                    this._snackBar.open('Error updating teacher', 'Close', {
+                        duration: 3000,
+                    });
+                },
+            });
     }
 
     // -----------------------------------------------------------------------------------------------------

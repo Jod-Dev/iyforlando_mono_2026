@@ -75,7 +75,14 @@
                         "development": {
                             "optimization": false,
                             "extractLicenses": false,
-                            "sourceMap": true
+                            "sourceMap": true,
+                            "allowedCommonJsDependencies": [
+                                "apexcharts",
+                                "crypto-js/enc-utf8",
+                                "crypto-js/hmac-sha256",
+                                "crypto-js/enc-base64",
+                                "quill-delta"
+                            ]
                         }
                     },
                     "defaultConfiguration": "production"
@@ -113,5 +120,8 @@
                 }
             }
         }
+    },
+    "cli": {
+      "analytics": "a42d7ce0-726a-4051-96aa-3d27ec07d067"
     }
 }

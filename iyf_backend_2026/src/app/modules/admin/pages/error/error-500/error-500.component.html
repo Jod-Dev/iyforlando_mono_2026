@@ -66,19 +66,35 @@
         <div
             class="mt-12 text-center text-4xl font-extrabold leading-tight tracking-tight sm:mt-24 md:text-7xl md:leading-none"
         >
-            Something went wrong!
+            Internal Server Error
         </div>
         <div
             class="text-secondary mt-2 text-center text-lg font-medium tracking-tight md:text-xl"
         >
-            Server Error 500. Our staff has been notified, thank you for your
-            understanding.
+            We're sorry, but something went wrong on our end. Our team has been notified and is working to fix the issue.
         </div>
-        <a
-            class="mt-12 font-medium text-primary-500 underline"
-            [routerLink]="['/']"
-        >
-            Back to Dashboard
-        </a>
+        <div class="mt-12 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+            <a
+                class="font-medium text-primary-500 underline hover:text-primary-600"
+                [routerLink]="['/dashboards/project']"
+            >
+                Go to Dashboard
+            </a>
+            <span class="text-secondary hidden sm:inline">•</span>
+            <button
+                type="button"
+                class="font-medium text-primary-500 underline hover:text-primary-600"
+                (click)="reloadPage()"
+            >
+                Reload Page
+            </button>
+            <span class="text-secondary hidden sm:inline">•</span>
+            <a
+                class="font-medium text-primary-500 underline hover:text-primary-600"
+                [routerLink]="['/']"
+            >
+                Go to Home
+            </a>
+        </div>
     </div>
 </div>

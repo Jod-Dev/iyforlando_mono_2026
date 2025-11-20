@@ -1,5 +1,3 @@
-import { CdkScrollable } from '@angular/cdk/scrolling';
-import { I18nPluralPipe, NgClass, PercentPipe } from '@angular/common';
 import {
     ChangeDetectionStrategy,
     ChangeDetectorRef,
@@ -9,22 +7,22 @@ import {
     ViewEncapsulation,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatOptionModule } from '@angular/material/core';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatSelectChange, MatSelectModule } from '@angular/material/select';
-import {
-    MatSlideToggleChange,
-    MatSlideToggleModule,
-} from '@angular/material/slide-toggle';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { Router, RouterLink } from '@angular/router';
+import { AcademiesService } from 'app/core/services/academies.service';
+import { Academy } from 'app/core/types/academies.types';
+import { Subject, takeUntil } from 'rxjs';
+import { CommonModule } from '@angular/common';
+import { MatCardModule } from '@angular/material/card';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { FuseFindByKeyPipe } from '@fuse/pipes/find-by-key/find-by-key.pipe';
-import { AcademyService } from 'app/modules/admin/apps/academy/academy.service';
-import { Category, Course } from 'app/modules/admin/apps/academy/academy.types';
-import { BehaviorSubject, Subject, combineLatest, takeUntil } from 'rxjs';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSlideToggleModule, MatSlideToggleChange } from '@angular/material/slide-toggle';
+import { FormsModule } from '@angular/forms';
 
 @Component({
     selector: 'academy-list',
@@ -32,36 +30,29 @@ import { BehaviorSubject, Subject, combineLatest, takeUntil } from 'rxjs';
     encapsulation: ViewEncapsulation.None,
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [
-        CdkScrollable,
-        MatFormFieldModule,
-        MatSelectModule,
-        MatOptionModule,
+        CommonModule,
+        FormsModule,
+        MatButtonModule,
         MatIconModule,
         MatInputModule,
-        MatSlideToggleModule,
-        NgClass,
+        MatFormFieldModule,
+        MatCardModule,
+        MatChipsModule,
+        MatDialogModule,
+        MatSnackBarModule,
         MatTooltipModule,
-        MatProgressBarModule,
-        MatButtonModule,
+        MatSelectModule,
+        MatSlideToggleModule,
         RouterLink,
-        FuseFindByKeyPipe,
-        PercentPipe,
-        I18nPluralPipe,
     ],
 })
 export class AcademyListComponent implements OnInit, OnDestroy {
-    categories: Category[];
-    courses: Course[];
-    filteredCourses: Course[];
-    filters: {
-        categorySlug$: BehaviorSubject<string>;
-        query$: BehaviorSubject<string>;
-        hideCompleted$: BehaviorSubject<boolean>;
-    } = {
-        categorySlug$: new BehaviorSubject('all'),
-        query$: new BehaviorSubject(''),
-        hideCompleted$: new BehaviorSubject(false),
-    };
+    academies: Academy[] = [];
+    filteredAcademies: Academy[] = [];
+    searchQuery: string = '';
+    selectedCategory: string = 'all';
+    categories: string[] = [];
+    loading: boolean = false;
 
     private _unsubscribeAll: Subject<any> = new Subject<any>();
 
@@ -69,10 +60,11 @@ export class AcademyListComponent implements OnInit, OnDestroy {
      * Constructor
      */
     constructor(
-        private _activatedRoute: ActivatedRoute,
         private _changeDetectorRef: ChangeDetectorRef,
         private _router: Router,
-        private _academyService: AcademyService
+        private _academiesService: AcademiesService,
+        private _dialog: MatDialog,
+        private _snackBar: MatSnackBar
     ) {}
 
     // -----------------------------------------------------------------------------------------------------
@@ -83,72 +75,13 @@ export class AcademyListComponent implements OnInit, OnDestroy {
      * On init
      */
     ngOnInit(): void {
-        // Get the categories
-        this._academyService.categories$
-            .pipe(takeUntil(this._unsubscribeAll))
-            .subscribe((categories: Category[]) => {
-                this.categories = categories;
-
-                // Mark for check
-                this._changeDetectorRef.markForCheck();
-            });
-
-        // Get the courses
-        this._academyService.courses$
-            .pipe(takeUntil(this._unsubscribeAll))
-            .subscribe((courses: Course[]) => {
-                this.courses = this.filteredCourses = courses;
-
-                // Mark for check
-                this._changeDetectorRef.markForCheck();
-            });
-
-        // Filter the courses
-        combineLatest([
-            this.filters.categorySlug$,
-            this.filters.query$,
-            this.filters.hideCompleted$,
-        ]).subscribe(([categorySlug, query, hideCompleted]) => {
-            // Reset the filtered courses
-            this.filteredCourses = this.courses;
-
-            // Filter by category
-            if (categorySlug !== 'all') {
-                this.filteredCourses = this.filteredCourses.filter(
-                    (course) => course.category === categorySlug
-                );
-            }
-
-            // Filter by search query
-            if (query !== '') {
-                this.filteredCourses = this.filteredCourses.filter(
-                    (course) =>
-                        course.title
-                            .toLowerCase()
-                            .includes(query.toLowerCase()) ||
-                        course.description
-                            .toLowerCase()
-                            .includes(query.toLowerCase()) ||
-                        course.category
-                            .toLowerCase()
-                            .includes(query.toLowerCase())
-                );
-            }
-
-            // Filter by completed
-            if (hideCompleted) {
-                this.filteredCourses = this.filteredCourses.filter(
-                    (course) => course.progress.completed === 0
-                );
-            }
-        });
+        this.loadAcademies();
     }
 
     /**
      * On destroy
      */
     ngOnDestroy(): void {
-        // Unsubscribe from all subscriptions
         this._unsubscribeAll.next(null);
         this._unsubscribeAll.complete();
     }
@@ -158,39 +91,207 @@ export class AcademyListComponent implements OnInit, OnDestroy {
     // -----------------------------------------------------------------------------------------------------
 
     /**
+     * Load academies
+     */
+    loadAcademies(): void {
+        this.loading = true;
+        this._changeDetectorRef.markForCheck();
+
+        this._academiesService
+            .getAll(true) // Include inactive for admin
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe({
+                next: (academies) => {
+                    this.academies = academies;
+                    // Extract unique categories
+                    const uniqueCategories = new Set(
+                        academies
+                            .map(a => a.tag)
+                            .filter(tag => tag && tag.trim() !== '')
+                    );
+                    this.categories = Array.from(uniqueCategories).sort();
+                    this.applyFilters();
+                    this.loading = false;
+                    this._changeDetectorRef.markForCheck();
+                },
+                error: (error) => {
+                    console.error('Error loading academies:', error);
+                    this._snackBar.open('Error loading academies', 'Close', {
+                        duration: 3000,
+                    });
+                    this.loading = false;
+                    this._changeDetectorRef.markForCheck();
+                },
+            });
+    }
+
+    /**
      * Filter by search query
-     *
-     * @param query
      */
     filterByQuery(query: string): void {
-        this.filters.query$.next(query);
+        this.searchQuery = query;
+        this.applyFilters();
     }
 
     /**
      * Filter by category
-     *
-     * @param change
      */
-    filterByCategory(change: MatSelectChange): void {
-        this.filters.categorySlug$.next(change.value);
+    filterByCategory(category: string): void {
+        this.selectedCategory = category;
+        this.applyFilters();
     }
 
     /**
-     * Show/hide completed courses
-     *
-     * @param change
+     * Apply all filters (search and category)
      */
-    toggleCompleted(change: MatSlideToggleChange): void {
-        this.filters.hideCompleted$.next(change.checked);
+    applyFilters(): void {
+        let filtered = [...this.academies];
+
+        // Filter by category
+        if (this.selectedCategory && this.selectedCategory !== 'all') {
+            filtered = filtered.filter(
+                (academy) => academy.tag === this.selectedCategory
+            );
+        }
+
+        // Filter by search query
+        if (this.searchQuery) {
+            const lowerQuery = this.searchQuery.toLowerCase();
+            filtered = filtered.filter(
+                (academy) =>
+                    academy.title.toLowerCase().includes(lowerQuery) ||
+                    academy.description.toLowerCase().includes(lowerQuery) ||
+                    (academy.tag && academy.tag.toLowerCase().includes(lowerQuery))
+            );
+        }
+
+        this.filteredAcademies = filtered;
+        this._changeDetectorRef.markForCheck();
+    }
+
+    /**
+     * Navigate to create new academy
+     */
+    createAcademy(): void {
+        this._router.navigate(['/apps/academy/new']);
+    }
+
+    /**
+     * Navigate to edit academy
+     */
+    editAcademy(academy: Academy): void {
+        this._router.navigate(['/apps/academy', academy.id, 'edit']);
+    }
+
+    /**
+     * Delete academy (soft delete)
+     */
+    deleteAcademy(academy: Academy): void {
+        if (!confirm(`Are you sure you want to delete "${academy.title}"?`)) {
+            return;
+        }
+
+        this._academiesService
+            .delete(academy.id!)
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe({
+                next: () => {
+                    this._snackBar.open('Academy deleted successfully', 'Close', {
+                        duration: 3000,
+                    });
+                    this.loadAcademies();
+                },
+                error: (error) => {
+                    console.error('Error deleting academy:', error);
+                    this._snackBar.open('Error deleting academy', 'Close', {
+                        duration: 3000,
+                    });
+                },
+            });
+    }
+
+    /**
+     * Handle toggle change event
+     */
+    onToggleChange(event: MatSlideToggleChange, academy: Academy): void {
+        const newStatus = event.checked ? 'active' : 'inactive';
+        this.toggleStatus(academy, newStatus);
+    }
+
+    /**
+     * Toggle academy status
+     */
+    toggleStatus(academy: Academy, newStatus?: 'active' | 'inactive'): void {
+        const status: 'active' | 'inactive' = newStatus || (academy.status === 'active' ? 'inactive' : 'active');
+        
+        // Optimistically update the local state
+        const academyIndex = this.academies.findIndex(a => a.id === academy.id);
+        if (academyIndex !== -1) {
+            this.academies[academyIndex].status = status;
+        }
+        this.applyFilters();
+        this._changeDetectorRef.markForCheck();
+        
+        this._academiesService
+            .update(academy.id!, { status })
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe({
+                next: (updatedAcademy) => {
+                    // Update with server response
+                    const index = this.academies.findIndex(a => a.id === academy.id);
+                    if (index !== -1) {
+                        this.academies[index] = updatedAcademy;
+                        this.applyFilters();
+                        this._changeDetectorRef.markForCheck();
+                    }
+                    this._snackBar.open(
+                        `Academy ${status === 'active' ? 'activated' : 'deactivated'}`,
+                        'Close',
+                        { duration: 3000 }
+                    );
+                },
+                error: (error) => {
+                    console.error('Error updating academy status:', error);
+                    // Revert optimistic update on error
+                    const index = this.academies.findIndex(a => a.id === academy.id);
+                    if (index !== -1) {
+                        this.academies[index].status = academy.status; // Revert to original
+                        this.applyFilters();
+                        this._changeDetectorRef.markForCheck();
+                    }
+                    this._snackBar.open('Error updating academy', 'Close', {
+                        duration: 3000,
+                    });
+                },
+            });
+    }
+
+    /**
+     * Get tag color classes based on tag value
+     */
+    getTagColorClasses(tag: string): string {
+        const tagLower = tag.toLowerCase();
+        if (tagLower.includes('art')) {
+            return 'bg-pink-100 text-pink-800 dark:bg-pink-500 dark:text-pink-50';
+        } else if (tagLower.includes('cooking')) {
+            return 'bg-orange-100 text-orange-800 dark:bg-orange-500 dark:text-orange-50';
+        } else if (tagLower.includes('language')) {
+            return 'bg-blue-100 text-blue-800 dark:bg-blue-500 dark:text-blue-50';
+        } else if (tagLower.includes('music')) {
+            return 'bg-purple-100 text-purple-800 dark:bg-purple-500 dark:text-purple-50';
+        } else if (tagLower.includes('sports')) {
+            return 'bg-green-100 text-green-800 dark:bg-green-500 dark:text-green-50';
+        } else if (tagLower.includes('kids')) {
+            return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-500 dark:text-yellow-50';
+        } else {
+            return 'bg-gray-100 text-gray-800 dark:bg-gray-500 dark:text-gray-50';
+        }
     }
 
     /**
      * Track by function for ngFor loops
-     *
-     * @param index
-     * @param item
      */
-    trackByFn(index: number, item: any): any {
+    trackByFn(index: number, item: Academy): any {
         return item.id || index;
     }
 }

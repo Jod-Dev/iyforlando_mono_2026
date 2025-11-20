@@ -9,10 +9,13 @@ import { LayoutComponent } from 'app/layout/layout.component';
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 export const appRoutes: Route[] = [
 
-    // Redirect empty path to '/dashboards/project'
+    // Test route (temporary - remove after testing)
+    {path: 'test-supabase', loadComponent: () => import('app/modules/test/test-supabase/test-supabase.component').then(m => m.TestSupabaseComponent)},
+
+    // Redirect empty path to '/dashboards/project' (IYF Home)
     {path: '', pathMatch : 'full', redirectTo: 'dashboards/project'},
 
-    // Redirect signed-in user to the '/dashboards/project'
+    // Redirect signed-in user to the '/dashboards/project' (IYF Home)
     //
     // After the user signs in, the sign-in page will redirect the user to the 'signed-in-redirect'
     // path. Below is another redirection for that path to redirect the user to the desired
@@ -68,6 +71,46 @@ export const appRoutes: Route[] = [
         ]
     },
 
+    // Public routes (no authentication required)
+    {
+        path: 'public',
+        component: LayoutComponent,
+        data: {
+            layout: 'empty'
+        },
+        children: [
+            {path: '', loadChildren: () => import('app/modules/public/public.routes').then(m => m.publicRoutes)},
+        ]
+    },
+
+    // Student routes (authentication required, role: student)
+    {
+        path: 'student',
+        canActivate: [AuthGuard],
+        canActivateChild: [AuthGuard],
+        component: LayoutComponent,
+        resolve: {
+            initialData: initialDataResolver
+        },
+        children: [
+            {path: '', loadChildren: () => import('app/modules/student/student.routes').then(m => m.studentRoutes)},
+        ]
+    },
+
+    // Volunteer routes (authentication required, role: volunteer)
+    {
+        path: 'volunteer',
+        canActivate: [AuthGuard],
+        canActivateChild: [AuthGuard],
+        component: LayoutComponent,
+        resolve: {
+            initialData: initialDataResolver
+        },
+        children: [
+            {path: '', loadChildren: () => import('app/modules/volunteer/volunteer.routes').then(m => m.volunteerRoutes)},
+        ]
+    },
+
     // Admin routes
     {
         path: '',
@@ -89,7 +132,9 @@ export const appRoutes: Route[] = [
 
             // Apps
             {path: 'apps', children: [
+                {path: 'registration', loadChildren: () => import('app/modules/admin/apps/registration/registration.routes')},
                 {path: 'academy', loadChildren: () => import('app/modules/admin/apps/academy/academy.routes')},
+                {path: 'teachers', loadChildren: () => import('app/modules/admin/apps/teachers/teachers.routes')},
                 {path: 'chat', loadChildren: () => import('app/modules/admin/apps/chat/chat.routes')},
                 {path: 'contacts', loadChildren: () => import('app/modules/admin/apps/contacts/contacts.routes')},
                 {path: 'ecommerce', loadChildren: () => import('app/modules/admin/apps/ecommerce/ecommerce.routes')},
@@ -201,8 +246,10 @@ export const appRoutes: Route[] = [
                 {path: 'guides', loadChildren: () => import('app/modules/admin/docs/guides/guides.routes')}
             ]},
 
-            // 404 & Catch all
+            // Error pages
             {path: '404-not-found', pathMatch: 'full', loadChildren: () => import('app/modules/admin/pages/error/error-404/error-404.routes')},
+            {path: '500-server-error', pathMatch: 'full', loadChildren: () => import('app/modules/admin/pages/error/error-500/error-500.routes')},
+            // Catch all - redirect to 404
             {path: '**', redirectTo: '404-not-found'}
         ]
     }

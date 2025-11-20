@@ -17,4 +17,11 @@ export class Error500Component {
      * Constructor
      */
     constructor() {}
+
+    /**
+     * Reload the current page
+     */
+    reloadPage(): void {
+        window.location.reload();
+    }
 }

@@ -126,7 +126,7 @@ export class LanguagesComponent implements OnInit, OnDestroy {
         // Get the flat navigation data
         const navigation = navComponent.navigation;
 
-        // Get the Project dashboard item and update its title
+        // Get the Home dashboard item and update its title
         const projectDashboardItem = this._fuseNavigationService.getItem(
             'dashboards.project',
             navigation
@@ -136,7 +136,7 @@ export class LanguagesComponent implements OnInit, OnDestroy {
                 .selectTranslate('Project')
                 .pipe(take(1))
                 .subscribe((translation) => {
-                    // Set the title
+                    // Set the title (translation will be "Home" from i18n)
                     projectDashboardItem.title = translation;
 
                     // Refresh the navigation component
